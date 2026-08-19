@@ -30,6 +30,8 @@ src/
 public/
   alteru-storage-scope.js          # 同域 session 存储隔离
   poster.png                       # 1024×1024 英文海报
+worker/
+  index.js                         # 自托管部署器入口与只读健康检查
 _qa/                               # 冻结引擎回归与本游戏世界合同
 doc/                               # 需求、视觉、技术和世界 brief
 ```
@@ -43,6 +45,7 @@ doc/                               # 需求、视觉、技术和世界 brief
 - `characterContinuity.ts` 阻止隐藏人物提前出现在关系、队伍或选项里；可见外形、名字来源和意图成立后才允许稳定 ID 入库。
 - `imageDirector.ts` 按普通场景均衡、重要对话第一人称、新地点第三人称进行构图；第一人称不附带玩家头像，角色和地点元数据必须与正文一致。
 - `useGameSave.ts` 负责平台云存档与本地镜像；`alteru-storage-scope.js` 把真实浏览器 key 写为当前部署 session 前缀，Remix 后不会继承源游戏缓存。
+- `worker/index.js` 仅提供 `/api/health` 与同构静态部署入口；不创建第二套存档、关系或叙事数据库。
 - 音频由 `StorySynth.ts` 和 `useStoryAudio.ts` 在首次手势后创建；静音、后台或 Web Audio 失败不阻塞剧情。
 - 语言由 `i18n.ts` 与双语 Cartridge 决定，支持中文和英文；所有本游戏固定可见内容在 Cartridge 中提供双语版本。
 
