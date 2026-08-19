@@ -21,7 +21,12 @@ npm run test:world
 npm run test:browser
 ```
 
-冻结引擎的完整验证与构建通过 `build-stateful-story-game` validator 执行；真实浏览器证据位于 `_qa/ui/`。项目当前只完成本地构建与验收，没有包含或执行部署流程。
+冻结引擎的完整验证与构建通过 `build-stateful-story-game` validator 执行；真实浏览器证据位于 `_qa/ui/`。
+
+## Published builds
+
+- 正式主站：<https://game.aiwaves.tech/0f817d1b-a6e4-4cf6-aee3-b37cd07c6bcd/>
+- GitHub Pages 镜像：<https://yinxinghuan.github.io/after-the-red-light/>
 
 详细玩法、视觉与实现分别见：
 
