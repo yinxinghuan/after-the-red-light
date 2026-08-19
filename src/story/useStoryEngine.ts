@@ -18,6 +18,7 @@ import { resolveDeterministicChoiceTurn, resolveDeterministicOpeningTurn } from 
 import { resolvePresetEventTurn } from './engine/presetEventDirector'
 import { t } from './i18n'
 import { ITEM_IMAGE_STYLE_VERSION, type AdapterProgress, type InventoryItem, type Locale, type StoryArchive, type StoryCartridge, type StoryMode, type StorySave } from './types'
+import { recordAuthorityShadowSample } from './engine/authorityShadow'
 
 type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'partyMemberIds' | 'danger' | 'decisionContext' | 'jobs'> & {
   version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
@@ -179,6 +180,10 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
   const archiveRef = useRef<StoryArchive>({ version: 1, worlds: {} })
   const { generate, resolveTaskUrl } = useGenImage()
   const persist = cloud.persist
+
+  useEffect(() => {
+    recordAuthorityShadowSample(save, cartridge)
+  }, [cartridge, save])
 
   useEffect(() => {
     if (!cloud.loaded || seeded.current) return

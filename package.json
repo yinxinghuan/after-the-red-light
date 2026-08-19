@@ -21,6 +21,7 @@
     "test:recovery-choice-priority": "node --import tsx _qa/recovery-choice-priority.ts",
     "test:active-thread": "node --import tsx _qa/active-thread-continuity.ts",
     "test:choice-quality": "node --import tsx _qa/recommended-choice-quality.ts",
+    "test:authority-replay": "node --import tsx _qa/authority-choice-replay.ts",
     "test:character-debut": "node --import tsx _qa/character-debut.ts",
     "test:perspective-director": "node --import tsx _qa/perspective-director.ts",
     "test:preset-events": "node --import tsx _qa/preset-events.ts",

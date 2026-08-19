@@ -54,16 +54,16 @@ function dangerDirector(locale: Language): StoryDangerDirector {
   }
 }
 
-function domainRules(locale: Language): { rules: DomainActionRule[] } {
+function domainRules(locale: Language): { rules: DomainActionRule[]; authorityMode: 'shadow' } {
   const zh = locale === 'zh'
   const recoverLobby = zh ? '退回大厅，在有人的灯下缓过气来' : 'Return to the lobby and recover under the occupied lights'
   const callMara = zh ? '给玛拉打电话，请她保持通话' : 'Call Mara and ask her to stay on the line'
   const lockRoom = zh ? '锁上自己的房门，休息到下一次整点' : 'Lock your own room and rest until the next hour'
-  return { rules: [
+  return { authorityMode: 'shadow', rules: [
     {
       id: 'light-red-match',
       intent: zh ? '点燃一根红色火柴' : 'light one red match',
-      match: zh ? ['点燃一根红色火柴', '用一根红色火柴'] : ['light one red match', 'use one red match'],
+      match: zh ? ['点燃一根红色火柴', '用一根红色火柴', '用红色火柴'] : ['light one red match', 'use one red match', 'use a red match'],
       requirements: [{ type: 'item', id: 'red-match', minCount: 1, reason: zh ? '红色火柴已经用完了' : 'No red matches remain' }],
       effects: [
         { type: 'inventory', action: 'remove', itemId: 'red-match', count: 1 },

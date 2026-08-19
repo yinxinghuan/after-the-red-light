@@ -39,10 +39,13 @@ for (const locale of ['zh', 'en'] as const) {
   const resolvedProse = locale === 'zh'
     ? '你们当场商量后堵住入口。俘虏的同伴无法突破，只得撤退；营救行动已经被阻止。'
     : "You confer on the spot and block the entrance. The prisoner's companions cannot break through and withdraw; the rescue attempt has been stopped."
+  const postResolutionChoice = locale === 'zh'
+    ? '检查堵住入口的货箱是否稳固'
+    : 'Check whether the cargo bracing the entrance is secure'
   const outcome = directive?.check?.outcome ?? 'success'
   const resolved = prepareTurnCandidate({
     save, cartridge, action: discuss,
-    parsed: parseStoryProtocol(`${resolvedProse}\n[scene_location: location="${location}"]\n[encounter: phase="resolution" kind="${threat}" severity="3" outcome="${outcome}"]\n[choices: "${action}"]`, locale),
+    parsed: parseStoryProtocol(`${resolvedProse}\n[scene_location: location="${location}"]\n[encounter: phase="resolution" kind="${threat}" severity="3" outcome="${outcome}"]\n[choices: "${postResolutionChoice}"]`, locale),
   })
   assert.deepEqual(resolved.violations, [], `${locale}: only visible same-thread resolution can close the conflict`)
   save = applyParsedScene(save, resolved.parsed, cartridge, discuss, undefined, undefined, directive)

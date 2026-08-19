@@ -39,7 +39,7 @@ function mapNodes(save: Pick<StorySave, 'map'>, cartridge: Pick<StoryCartridge, 
 
 function routeMovementCue(value: string, locale: StoryCartridge['locale']): boolean {
   return locale === 'zh'
-    ? /(?:前往|去往|赶往|返回|回到|进入|走进|走到|抵达|到达|下车|离开|往[^。！？\n]{0,28}(?:走|去|检查|干活|工作|修补)|沿[^。！？\n]{0,28}(?:走|前进)|跟随|带着|陪同)/.test(value)
+    ? /(?:前往|去往|赶往|返回|回到|进入|走进|走到|抵达|到达|上楼|下楼|上到|下到|下车|离开|往[^。！？\n]{0,28}(?:走|去|检查|干活|工作|修补)|沿[^。！？\n]{0,28}(?:走|前进)|跟随|带着|陪同)/.test(value)
     : /\b(?:travel|go|head|return|enter|walk|reach|arrive|get off|leave|follow|accompany)\b/i.test(value)
 }
 
@@ -328,16 +328,17 @@ export function canonicalizeTurnMetadata(
     const command = commands[choiceIndex]
     if (command.type === 'choices') {
       const seen = new Set<string>()
+      const mapUpdate = commands.find((entry): entry is Extract<ParsedCommand, { type: 'map_update' }> => entry.type === 'map_update')
+      const objectiveUpdate = [...commands].reverse().find((entry): entry is Extract<ParsedCommand, { type: 'state' }> => entry.type === 'state')
       const candidates = command.choices
         .map((label) => label.trim())
         .filter((label) => label.length >= 2 && label.length <= 96 && !seen.has(label) && Boolean(seen.add(label)))
         .filter((label) => !isGenericSuggestedChoice(label, cartridge.locale))
+        .filter((label) => !repeatsCurrentObjective(label, objectiveUpdate?.value ?? save.objective, cartridge.locale))
         .filter((label) => !repeatsCurrentAction(label, action, cartridge.locale))
         .filter((label) => !stalePlaceChoice(label, location, save))
         .slice(0, 5)
         .map((label, index) => ({ id: `candidate-${index}`, label }))
-      const mapUpdate = commands.find((entry): entry is Extract<ParsedCommand, { type: 'map_update' }> => entry.type === 'map_update')
-      const objectiveUpdate = [...commands].reverse().find((entry): entry is Extract<ParsedCommand, { type: 'state' }> => entry.type === 'state')
       const sceneLocationUpdate = [...commands].reverse().find((entry): entry is Extract<ParsedCommand, { type: 'scene_location' }> => entry.type === 'scene_location')
       const offeredJobs = commands.filter((entry): entry is Extract<ParsedCommand, { type: 'job' }> => entry.type === 'job' && entry.action === 'offer')
       const groundedMap = mapUpdate
@@ -370,12 +371,20 @@ export function canonicalizeTurnMetadata(
         blocks: [...save.blocks, ...parsed.blocks],
       }
       const textGrounded = new Set(filterGroundedChoices(candidates, candidateSave, cartridge, parsed.blocks).map((choice) => choice.label))
-      const grounded = candidates.filter((choice) => {
+      let grounded = candidates.filter((choice) => {
         const domain = resolveDomainAction(candidateSave, cartridge, choice.label)
         return domain ? domain.status === 'accepted' : Boolean(inferActionDestination(candidateSave, cartridge, choice.label)) || textGrounded.has(choice.label)
-      }).map((choice) => choice.label)
-      if (grounded.length !== command.choices.length || grounded.some((label, index) => label !== command.choices[index])) {
-        commands = commands.map((entry, index) => index === choiceIndex ? { type: 'choices' as const, choices: grounded } : entry)
+      })
+      if (clean(location) !== clean(save.location) && grounded.length > 1) {
+        const withoutImmediateBacktrack = grounded.filter((choice) => {
+          const destination = inferActionDestination(candidateSave, cartridge, choice.label)
+          return !destination || clean(destination.label) !== clean(save.location) || !immediateBacktrackCue(choice.label, cartridge.locale)
+        })
+        if (withoutImmediateBacktrack.length) grounded = withoutImmediateBacktrack
+      }
+      const groundedLabels = grounded.map((choice) => choice.label)
+      if (groundedLabels.length !== command.choices.length || groundedLabels.some((label, index) => label !== command.choices[index])) {
+        commands = commands.map((entry, index) => index === choiceIndex ? { type: 'choices' as const, choices: groundedLabels } : entry)
       }
     }
   }
@@ -423,6 +432,20 @@ export function repeatsCurrentAction(label: string, action: string | undefined, 
   const candidate = withoutRetryPrefix(label, locale)
   const current = withoutRetryPrefix(action, locale)
   return Boolean(candidate && current && candidate === current)
+}
+
+/** An objective describes a desired outcome, not an executable next action. */
+export function repeatsCurrentObjective(label: string, objective: string | undefined, locale: StoryCartridge['locale']): boolean {
+  if (!objective?.trim()) return false
+  const candidate = withoutRetryPrefix(label, locale)
+  const current = withoutRetryPrefix(objective, locale)
+  return Boolean(candidate && current && candidate === current)
+}
+
+function immediateBacktrackCue(label: string, locale: StoryCartridge['locale']): boolean {
+  return locale === 'zh'
+    ? /(?:返回|回到|折返|退回)/u.test(label)
+    : /\b(?:return|go back|head back|backtrack|retreat back)\b/i.test(label)
 }
 
 export function canCommitDisplayedChoiceWithoutGeneratedReplies(

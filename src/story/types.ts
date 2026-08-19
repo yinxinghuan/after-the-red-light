@@ -160,6 +160,11 @@ export type DomainEffect =
 export interface DomainActionRule {
   id: string
   intent: string
+  /** Stable player-facing wording used only by the optional authority recommender. */
+  choiceLabel?: string
+  /** Opt-in; executable rules are not automatically recommended. */
+  recommend?: boolean
+  rank?: number
   match: string[]
   matchMode?: 'contains' | 'exact'
   intentGuard?: 'rest-commitment'
@@ -180,10 +185,24 @@ export type DomainDerivedFact =
 export interface DomainObjectiveTransition { from: string; to: string; requirements: DomainRequirement[] }
 export interface StoryDomainRules {
   rules: DomainActionRule[]
+  /** Shadow audits without UI changes; authority-first is reserved for an explicit canary. */
+  authorityMode?: 'off' | 'shadow' | 'authority-first'
+  /** Omitted/zero keeps contextual story recovery instead of a fixed mechanics menu. */
+  authorityFallbackLimit?: number
   legacyChoiceSets?: string[][]
   derivedItemMetrics?: DomainDerivedItemMetric[]
   derivedFacts?: DomainDerivedFact[]
   objectiveTransitions?: DomainObjectiveTransition[]
+}
+export interface DomainChoiceAuthorityAudit {
+  mode: NonNullable<StoryDomainRules['authorityMode']>
+  authorityChoices: Choice[]
+  narrativeChoices: Array<{
+    label: string
+    status: 'governed-accepted' | 'governed-rejected' | 'open-narrative'
+    ruleId?: string
+    reasons?: string[]
+  }>
 }
 export interface DomainActionResolution {
   status: 'accepted' | 'rejected'

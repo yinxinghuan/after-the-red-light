@@ -1,5 +1,5 @@
 import type {
-  DomainActionResolution, DomainEffect, DomainRequirement, ParsedCommand, StoryBlock, StoryCartridge, StorySave,
+  Choice, DomainActionResolution, DomainChoiceAuthorityAudit, DomainEffect, DomainRequirement, ParsedCommand, StoryBlock, StoryCartridge, StorySave,
 } from '../types'
 import { decodeChoiceRecord, encodeChoiceRecord } from './choiceInput'
 
@@ -173,6 +173,50 @@ export function resolveDomainAction(save: StorySave, cartridge: StoryCartridge, 
     successChoices: [...((reasons.length && candidate.rule.rejectionChoices
       ? candidate.rule.rejectionChoices
       : candidate.rule.successChoices) ?? [])],
+  }
+}
+
+export function enumerateRecommendedDomainChoices(save: StorySave, cartridge: StoryCartridge): Choice[] {
+  const domain = cartridge.domainRules
+  if (!domain || (domain.authorityMode ?? 'off') === 'off') return []
+  const seen = new Set<string>()
+  return domain.rules
+    .map((rule, index) => ({ rule, index }))
+    .filter(({ rule }) => rule.recommend === true && Boolean(rule.choiceLabel?.trim()))
+    .filter(({ rule }) => save.danger.phase === 'calm' || rule.requirements.some((requirement) => (
+      requirement.type === 'danger' && requirement.phases.includes(save.danger.phase)
+    )))
+    .sort((left, right) => (left.rule.rank ?? left.index) - (right.rule.rank ?? right.index)
+      || left.rule.id.localeCompare(right.rule.id))
+    .flatMap(({ rule }) => {
+      const label = rule.choiceLabel!.trim()
+      if (seen.has(label)) return []
+      const resolution = resolveDomainAction(save, cartridge, label)
+      if (!resolution || resolution.ruleId !== rule.id || resolution.status !== 'accepted') return []
+      seen.add(label)
+      return [{ id: `authority-${save.scene}-${rule.id}`, label }]
+    })
+}
+
+export function auditDomainChoiceAuthority(
+  save: StorySave,
+  cartridge: StoryCartridge,
+  narrativeChoices: Choice[],
+): DomainChoiceAuthorityAudit {
+  const mode = cartridge.domainRules?.authorityMode ?? 'off'
+  return {
+    mode,
+    authorityChoices: enumerateRecommendedDomainChoices(save, cartridge),
+    narrativeChoices: narrativeChoices.map((choice) => {
+      const resolution = resolveDomainAction(save, cartridge, choice.label)
+      if (!resolution) return { label: choice.label, status: 'open-narrative' as const }
+      return {
+        label: choice.label,
+        status: resolution.status === 'accepted' ? 'governed-accepted' as const : 'governed-rejected' as const,
+        ruleId: resolution.ruleId,
+        reasons: resolution.reasons,
+      }
+    }),
   }
 }
 

@@ -40,7 +40,9 @@ doc/                               # 需求、视觉、技术和世界 brief
 
 - `afterTheRedLight.ts` 是本游戏内容真源。`build('zh' | 'en')` 定义三项状态、六个初始地点、三名成人角色、八个预设事件、五类地点绑定危险与三个确定性开局。
 - `turnPipeline.ts` 先校验候选回合，再原子提交正文、选择和状态；不完整或矛盾回合不会写入存档。`turnConsistency.ts` 过滤过期地点、断头路、重复行动和与当前事件无关的推荐项。
+- `continuity.ts` 的 grounding 以当前已经建立的人、地点、物品和上下文证据为准，不要求未来行动逐字复述正文；长期目标不会直接成为按钮。真实抵达新地点后，只要存在本地行动，系统不会把“立即返回刚离开的地点”留作主要推荐。
 - `domainRules.ts` 执行火柴、休息、镇定归零恢复与边界规则；匹配、前置、数值和物品变化都由本地规则一次完成。玩家明确点燃前不会扣火柴。
+- `authorityShadow.ts` 只在 QA 参数 `?authority_shadow=1` 下把新旧候选分类记录到页面内存；它不改界面、不写存档、不上传数据。真实生成 QA 覆盖 3 条分支、9 个回合，最终为 0 空选项、0 一致性恢复和 0 即时地点折返。
 - `dangerDirector.ts` 保持 warning → confrontation → resolution 的同一威胁线程；无身体战斗，危险只能在声明地点出现，并始终提供说出变化、进入亮处或点燃火柴等可验证方法。
 - `characterContinuity.ts` 阻止隐藏人物提前出现在关系、队伍或选项里；可见外形、名字来源和意图成立后才允许稳定 ID 入库。
 - `imageDirector.ts` 按普通场景均衡、重要对话第一人称、新地点第三人称进行构图；第一人称不附带玩家头像，角色和地点元数据必须与正文一致。
@@ -53,7 +55,7 @@ doc/                               # 需求、视觉、技术和世界 brief
 
 - 改故事、角色、地点、事件、数值或成人内容边界：编辑 `src/story/cartridges/afterTheRedLight.ts`，并同步 `doc/world-brief.json` 与 `_qa/world-contract.ts`。
 - 增加原子动作：在 Cartridge 的 `domainRules` 增加唯一规则 ID、前置、结果、叙事和恢复选择；不要在正文里手写数值后果。
-- 调整推荐选项质量：优先改 Cartridge 的目标、地点 capability、危险方法与 authored turn；共享过滤器只有在能惠及所有游戏且带回归测试时才修改。
+- 调整推荐选项质量：优先改 Cartridge 的目标、地点 capability、危险方法与 authored turn；共享过滤器只有在能惠及所有游戏且带原始候选回放时才修改。运行 `npm run test:choice-quality` 与 `npm run test:authority-replay` 验证未来行动改写、目标复述、抵达折返和资源同义词边界。
 - 换入口图、封面或海报：替换 `src/story/img/worlds/after-the-red-light-entry.webp`、`after-the-red-light.webp` 和 `public/poster.png`；运行时场景继续使用 `src/shared/runtime/media.ts` 的公共服务合同。
 - 改视觉与响应式：编辑 `src/story/story.less`，保持 44×44 触控目标、320×568/390×844 无横向溢出与阅读锚点。
 - 加后端：游戏内容层不得写死旧 UUID 或私有媒体接口；平台接口继续走 bridge，自有 Worker 才按 `/<GAME_ID>/api/*` 合同接入。

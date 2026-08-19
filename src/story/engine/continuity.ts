@@ -47,11 +47,20 @@ function choiceIsGrounded(
 ): boolean {
   const source = sources.join(' ')
   let termSource = choice.label
+  let groundedStableReference = false
   if (locale === 'zh') {
     for (const entity of stableEntities.sort((left, right) => right.length - left.length)) {
       if (entity.length < 2 || !clean(termSource).includes(clean(entity))) continue
       if (!clean(source).includes(clean(entity))) return false
+      groundedStableReference = true
       termSource = termSource.replaceAll(entity, ' ')
+    }
+  } else {
+    for (const entity of stableEntities.sort((left, right) => right.length - left.length)) {
+      if (entity.length < 3 || !clean(termSource).includes(clean(entity))) continue
+      if (!clean(source).includes(clean(entity))) return false
+      groundedStableReference = true
+      termSource = termSource.replace(new RegExp(entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' ')
     }
   }
   const terms = locale === 'zh' ? chineseTerms(termSource) : englishTerms(termSource)
@@ -72,7 +81,14 @@ function choiceIsGrounded(
     return reachable.has(normalized.length)
   }
   const matches = terms.filter((term) => sources.some((candidate) => clean(candidate).includes(clean(term))) || canSegmentFromSources(term))
-  return matches.length === terms.length
+  // A future action naturally introduces verbs and manner words that need not
+  // have appeared verbatim in the preceding prose. Keep an open narrative
+  // choice when it names at least one established entity/place/item, or when
+  // at least one remaining concrete term is grounded. Domain rules, route
+  // checks and character continuity still reject choices that are provably
+  // impossible; this filter must not delete valid exploration merely because
+  // a model paraphrased it.
+  return groundedStableReference || matches.length > 0
 }
 
 export function filterGroundedChoices(

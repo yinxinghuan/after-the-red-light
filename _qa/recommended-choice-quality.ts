@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { isGenericSuggestedChoice, repeatsCurrentAction } from '../src/story/engine/turnConsistency'
+import { isGenericSuggestedChoice, repeatsCurrentAction, repeatsCurrentObjective } from '../src/story/engine/turnConsistency'
 
 for (const label of [
   '和同伴商量怎么办',
@@ -33,5 +33,8 @@ assert.equal(repeatsCurrentAction('再次检查仓门', '检查仓门', 'zh'), t
 assert.equal(repeatsCurrentAction('继续检查仓门', '检查仓门', 'zh'), true)
 assert.equal(repeatsCurrentAction('Retry checking the warehouse door', 'Check the warehouse door', 'en'), true)
 assert.equal(repeatsCurrentAction('Push cargo behind the warehouse door', 'Check the warehouse door', 'en'), false)
+assert.equal(repeatsCurrentObjective('查明房卡为何能打开不存在的房间', '查明房卡为何能打开不存在的房间', 'zh'), true)
+assert.equal(repeatsCurrentObjective('检查房卡背面的压痕', '查明房卡为何能打开不存在的房间', 'zh'), false)
+assert.equal(repeatsCurrentObjective('Learn why the key opens the missing room', 'Learn why the key opens the missing room', 'en'), true)
 
-console.log(JSON.stringify({ ok: true, checks: ['generic-placeholder-filter', 'concrete-action-preserved', 'immediate-repeat-filter', 'zh-en'] }))
+console.log(JSON.stringify({ ok: true, checks: ['generic-placeholder-filter', 'concrete-action-preserved', 'immediate-repeat-filter', 'objective-is-not-an-action', 'zh-en'] }))
