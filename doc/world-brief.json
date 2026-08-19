@@ -1,0 +1,75 @@
+{
+  "$schema": "../../.agents/skills/build-stateful-story-game/assets/world-brief.schema.json",
+  "game": {
+    "id": "after-the-red-light",
+    "titleZh": "红灯熄灭以后",
+    "titleEn": "After the Red Light Goes Out",
+    "mode": "guided",
+    "languages": ["zh", "en"]
+  },
+  "experience": {
+    "playerFantasy": "You are an adult traveler stranded overnight in a fading boutique hotel, free to investigate, flirt, refuse intimacy, retreat, or leave a relationship unresolved.",
+    "emotionalPromise": "Sensual tension and intimate curiosity slowly become psychological horror, while consent and player boundaries remain meaningful choices.",
+    "commonKnowledgeBoundary": "A geographically neutral present-day hotel with familiar rooms, keys, lifts, phones, lounges, and one restrained supernatural rule; no cultural glossary is required.",
+    "openingObjective": "Discover why the key in your hand opens a room the receptionist says does not exist."
+  },
+  "world": {
+    "fixedRules": [
+      "Every recurring character is explicitly an adult, and attraction never overrides a stated refusal or boundary.",
+      "The hotel changes only when its red corridor lamps go dark; confirmed rooms, keys, injuries, promises, and relationships cannot be silently rewritten.",
+      "No sexual assault, coerced sexual activity, minors, incest, or explicit sex is generated; horror may threaten safety and identity without eroticizing violation.",
+      "Characters know only what they witnessed, were told, or could reasonably infer, and relationship changes cite visible events."
+    ],
+    "generationRules": [
+      "AI may create adult guests, intimate conversations, hotel clues, room details, memories, dreams, and nonsexual supernatural danger within the fixed boundaries.",
+      "Every turn changes a clue, relationship, location, object, clock fact, composure, or desire; atmosphere alone cannot replace action twice in succession.",
+      "A direct refusal, pause, or request for distance is honored immediately and never punished with lost clues, forced intimacy, or relationship damage.",
+      "Failure creates lost time, shaken composure, misleading desire, separation, a changed route, or a marked relationship rather than deleting the save."
+    ],
+    "maxActiveThreads": 3
+  },
+  "stats": [
+    { "id": "composure", "labelZh": "镇定", "labelEn": "Composure", "min": 0, "max": 100, "initial": 68, "display": "bar", "dangerDirection": "low", "warningAt": 30, "dangerAt": 0, "maxDelta": 18 },
+    { "id": "desire", "labelZh": "欲念", "labelEn": "Desire", "min": 0, "max": 100, "initial": 22, "display": "bar", "dangerDirection": "high", "warningAt": 65, "dangerAt": 85, "maxDelta": 16 },
+    { "id": "clues", "labelZh": "线索", "labelEn": "Clues", "min": 0, "max": 8, "initial": 0, "display": "number", "dangerDirection": "low", "warningAt": 2, "dangerAt": 0, "maxDelta": 2 }
+  ],
+  "choiceIntents": ["talk, flirt, or set a boundary", "inspect a room, object, or contradiction", "retreat, spend a match, or accept a supernatural risk"],
+  "signatureItem": {
+    "nameZh": "红色火柴册",
+    "nameEn": "Red Matchbook",
+    "ability": "One match reveals the hotel detail that a dark corridor is trying to hide.",
+    "limitOrCost": "Only three matches remain, and each flame raises the hotel's attention while costing composure.",
+    "provenance": "It was slipped beneath the player's room key before the receptionist handed it over."
+  },
+  "danger": {
+    "minSafeTurns": 2,
+    "maxSafeTurns": 4,
+    "cooldownTurns": 2,
+    "physicalCombat": "none",
+    "methods": ["Name the exact thing that changed", "Step into the nearest lit public room", "Use one red match to expose the false detail"],
+    "threatPalette": [
+      "the corridor mirrors begin copying a gesture the player did not make",
+      "a hotel phone repeats an intimate sentence no caller heard",
+      "the lift opens onto a floor absent from the brass directory",
+      "a locked room starts answering in the voice of someone trusted",
+      "the red lamps go dark one by one behind the player"
+    ],
+    "fallbackStatId": "composure",
+    "fallbackAmount": 12
+  },
+  "visuals": {
+    "material": "apartment",
+    "artDirection": "decayed boutique-hotel editorial noir, oxblood velvet, nicotine ivory, tarnished brass, wet midnight windows, restrained sensual framing and quiet supernatural wrongness",
+    "entryScene": "wide rain-dark hotel lobby at 01:17, one red corridor lamp going dark above a brass key desk, an adult receptionist visible at a respectful distance, no readable text",
+    "sceneImageDirection": "cinematic editorial sensual-horror illustration, grounded adult anatomy, intimate but non-explicit distance, precise hotel geography, oxblood and nicotine palette, no UI or readable text",
+    "itemImageDirection": "boutique-hotel evidence still life on dark velvet and tarnished brass, object only, no people, no readable text"
+  },
+  "audio": {
+    "mood": "slow ventilation hum, distant rain, muted lounge piano intervals, brass lift chime, and sparse low pulses when a red lamp dies",
+    "bpm": 48
+  },
+  "ending": {
+    "type": "chapter-boundary",
+    "failureConsequences": ["shaken composure", "a misleading intimate memory", "lost time", "a sealed route", "a relationship marked by mistrust"]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "after-the-red-light",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test:protocol": "node --import tsx _qa/protocol.ts",
+    "test:danger": "node --import tsx _qa/danger-director.ts",
+    "test:danger-grounding": "node --import tsx _qa/danger-directive-grounding.ts",
+    "test:payment": "node --import tsx _qa/payment-consistency.ts",
+    "test:turn": "node --import tsx _qa/turn-consistency.ts",
+    "test:dynamic-locations": "node --import tsx _qa/dynamic-locations.ts",
+    "test:pipeline": "node --import tsx _qa/turn-pipeline.ts",
+    "test:domain-continuity": "node --import tsx _qa/domain-thread-continuity.ts",
+    "test:recovery-choice-priority": "node --import tsx _qa/recovery-choice-priority.ts",
+    "test:active-thread": "node --import tsx _qa/active-thread-continuity.ts",
+    "test:choice-quality": "node --import tsx _qa/recommended-choice-quality.ts",
+    "test:character-debut": "node --import tsx _qa/character-debut.ts",
+    "test:perspective-director": "node --import tsx _qa/perspective-director.ts",
+    "test:preset-events": "node --import tsx _qa/preset-events.ts",
+    "test:v9-migration": "node --import tsx _qa/v9-migration.ts",
+    "test:world": "node --import tsx _qa/world-contract.ts",
+    "test:browser": "node _qa/browser-flow.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "less": "^4.2.0",
+    "playwright": "^1.62.1",
+    "tsx": "^4.23.5",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.21"
+  }
+}

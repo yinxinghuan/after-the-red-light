@@ -1,0 +1,57 @@
+# Technical
+
+## 1. 技术栈
+
+- React 18 + TypeScript 5.6 + Less + Vite 5，`base: './'`，构建产物为 `dist/`。
+- 叙事采用冻结的 stateful story engine standalone 导出；本游戏只注册 `after-the-red-light` Cartridge，中英文构建共享同一规则表。
+- 状态由 reducer 与结构化命令共同维护，模型正文不能直接改变数值、物品、人物、地点或危险。
+- 存档使用 `useGameSave` 与 `alteruLocalStorage`，以部署 session UUID 隔离；媒体生成只调用 AlterU 公共媒体服务客户端。
+- 静态入口图、封面和海报底图由 AlterU Media Service v1 以本游戏 UUID `0f817d1b-a6e4-4cf6-aee3-b37cd07c6bcd` 生成；采用的入口任务为 `mt_ae7ba371db151d59ea04ca7e94998b8b`，封面任务为 `mt_9a8c06b55957933c5ef76be51e3edfa5`。海报标题在无文字封面画面上本地排版，避免生成伪文字。
+
+## 2. 目录结构
+
+```text
+src/
+  main.tsx                         # React 入口
+  game-id.ts                       # 可替换的永久游戏 UUID
+  story/
+    StoryShell.tsx                 # 阅读、选择、抽屉、检查点与错误恢复 UI
+    useStoryEngine.ts              # 回合编排、存档、适配器与媒体生命周期
+    story.less                     # 响应式纸面/旅馆界面
+    cartridges/
+      afterTheRedLight.ts          # 双语世界、状态、角色、事件、开局与原子规则
+      index.ts                     # 唯一 Cartridge 注册表
+    engine/                        # 协议、reducer、连续性、危险、地点、选项与图片导演
+    adapters/                      # 平台远端、Aigram 与本地 mock 适配器
+    img/worlds/                    # 入口图与封面
+  shared/
+    runtime/                       # 平台桥、游戏 UUID 与公共媒体客户端
+    save/                          # UUID 云存档与本地镜像
+public/
+  alteru-storage-scope.js          # 同域 session 存储隔离
+  poster.png                       # 1024×1024 英文海报
+_qa/                               # 冻结引擎回归与本游戏世界合同
+doc/                               # 需求、视觉、技术和世界 brief
+```
+
+## 3. 核心模块
+
+- `afterTheRedLight.ts` 是本游戏内容真源。`build('zh' | 'en')` 定义三项状态、六个初始地点、三名成人角色、八个预设事件、五类地点绑定危险与三个确定性开局。
+- `turnPipeline.ts` 先校验候选回合，再原子提交正文、选择和状态；不完整或矛盾回合不会写入存档。`turnConsistency.ts` 过滤过期地点、断头路、重复行动和与当前事件无关的推荐项。
+- `domainRules.ts` 执行火柴、休息、镇定归零恢复与边界规则；匹配、前置、数值和物品变化都由本地规则一次完成。玩家明确点燃前不会扣火柴。
+- `dangerDirector.ts` 保持 warning → confrontation → resolution 的同一威胁线程；无身体战斗，危险只能在声明地点出现，并始终提供说出变化、进入亮处或点燃火柴等可验证方法。
+- `characterContinuity.ts` 阻止隐藏人物提前出现在关系、队伍或选项里；可见外形、名字来源和意图成立后才允许稳定 ID 入库。
+- `imageDirector.ts` 按普通场景均衡、重要对话第一人称、新地点第三人称进行构图；第一人称不附带玩家头像，角色和地点元数据必须与正文一致。
+- `useGameSave.ts` 负责平台云存档与本地镜像；`alteru-storage-scope.js` 把真实浏览器 key 写为当前部署 session 前缀，Remix 后不会继承源游戏缓存。
+- 音频由 `StorySynth.ts` 和 `useStoryAudio.ts` 在首次手势后创建；静音、后台或 Web Audio 失败不阻塞剧情。
+- 语言由 `i18n.ts` 与双语 Cartridge 决定，支持中文和英文；所有本游戏固定可见内容在 Cartridge 中提供双语版本。
+
+## 4. 扩展点
+
+- 改故事、角色、地点、事件、数值或成人内容边界：编辑 `src/story/cartridges/afterTheRedLight.ts`，并同步 `doc/world-brief.json` 与 `_qa/world-contract.ts`。
+- 增加原子动作：在 Cartridge 的 `domainRules` 增加唯一规则 ID、前置、结果、叙事和恢复选择；不要在正文里手写数值后果。
+- 调整推荐选项质量：优先改 Cartridge 的目标、地点 capability、危险方法与 authored turn；共享过滤器只有在能惠及所有游戏且带回归测试时才修改。
+- 换入口图、封面或海报：替换 `src/story/img/worlds/after-the-red-light-entry.webp`、`after-the-red-light.webp` 和 `public/poster.png`；运行时场景继续使用 `src/shared/runtime/media.ts` 的公共服务合同。
+- 改视觉与响应式：编辑 `src/story/story.less`，保持 44×44 触控目标、320×568/390×844 无横向溢出与阅读锚点。
+- 加后端：游戏内容层不得写死旧 UUID 或私有媒体接口；平台接口继续走 bridge，自有 Worker 才按 `/<GAME_ID>/api/*` 合同接入。
+- 发布前至少运行 `npm run test:world`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收。
