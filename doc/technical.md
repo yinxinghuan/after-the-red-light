@@ -43,7 +43,8 @@ doc/                               # 需求、视觉、技术和世界 brief
 - `continuity.ts` 的 grounding 以当前已经建立的人、地点、物品和上下文证据为准，不要求未来行动逐字复述正文；长期目标不会直接成为按钮。真实抵达新地点后，只要存在本地行动，系统不会把“立即返回刚离开的地点”留作主要推荐。
 - `domainRules.ts` 执行火柴、休息、镇定归零恢复与边界规则；匹配、前置、数值和物品变化都由本地规则一次完成。玩家明确点燃前不会扣火柴。
 - `authorityShadow.ts` 只在 QA 参数 `?authority_shadow=1` 下把新旧候选分类记录到页面内存；它不改界面、不写存档、不上传数据。真实生成 QA 覆盖 3 条分支、9 个回合，最终为 0 空选项、0 一致性恢复和 0 即时地点折返。
-- `dangerDirector.ts` 保持 warning → confrontation → resolution 的同一威胁线程；无身体战斗，危险只能在声明地点出现，并始终提供说出变化、进入亮处或点燃火柴等可验证方法。
+- `dangerDirector.ts` 保持 warning → confrontation → resolution 的同一威胁线程；无身体战斗，危险只能在声明地点出现，并始终提供说出变化、进入亮处或点燃火柴等可验证方法。生成结果及一次修复都不合格时，`createDangerFallbackScene()` 以本地确定性结果推进原威胁；`repairLegacyDangerLoopChoices()` 只迁移旧版通用恢复循环和带引号的旧危险菜单，不覆盖正常作者选项。
+- `domainRules.ts` 的 `dangerPolicy: 'advance'` 与 reducer 的受限 encounter 通道共同保证：点燃红色火柴等原子行动在扣除物品、应用数值后同回合推进危险阶段，模型协议不能附带第二次状态修改。
 - `characterContinuity.ts` 阻止隐藏人物提前出现在关系、队伍或选项里；可见外形、名字来源和意图成立后才允许稳定 ID 入库。
 - `imageDirector.ts` 按普通场景均衡、重要对话第一人称、新地点第三人称进行构图；第一人称不附带玩家头像，角色和地点元数据必须与正文一致。
 - `useGameSave.ts` 负责平台云存档与本地镜像；`alteru-storage-scope.js` 把真实浏览器 key 写为当前部署 session 前缀，Remix 后不会继承源游戏缓存。
@@ -59,4 +60,4 @@ doc/                               # 需求、视觉、技术和世界 brief
 - 换入口图、封面或海报：替换 `src/story/img/worlds/after-the-red-light-entry.webp`、`after-the-red-light.webp` 和 `public/poster.png`；运行时场景继续使用 `src/shared/runtime/media.ts` 的公共服务合同。
 - 改视觉与响应式：编辑 `src/story/story.less`，保持 44×44 触控目标、320×568/390×844 无横向溢出与阅读锚点。
 - 加后端：游戏内容层不得写死旧 UUID 或私有媒体接口；平台接口继续走 bridge，自有 Worker 才按 `/<GAME_ID>/api/*` 合同接入。
-- 发布前至少运行 `npm run test:world`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收。
+- 发布前至少运行 `npm run test:world`、`npm run test:red-light-loop`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收；浏览器路径必须包含“进入二层 → 点燃火柴 → 直接应对 → 继续调查”，并断言没有 `consistency-recovery` 场景。

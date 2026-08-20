@@ -189,9 +189,97 @@ export function contextualDangerChoiceLabels(
     ? `${subject.slice(0, locale === 'zh' ? 25 : 55).trim()}…`
     : subject
   const labels = locale === 'zh'
-    ? [`确认“${concise}”的具体情况`, `立即应对“${concise}”`, `撤离“${concise}”影响的现场`]
+    ? [`确认${concise}的具体情况`, `立即应对${concise}`, `撤离${concise}影响的现场`]
     : [`Confirm the facts about ${concise}`, `Respond directly to ${concise}`, `Withdraw from the scene of ${concise}`]
   return [...new Set(labels)].filter((label) => label.length <= 96)
+}
+
+/** After one invalid generated repair, advance the exact danger directive
+ * locally. A model outage or malformed reply must never send the player back
+ * into a generic recovery loop. */
+export function createDangerFallbackScene(
+  save: Pick<StorySave, 'scene' | 'location' | 'sceneLocation' | 'objective'>,
+  cartridge: StoryCartridge,
+  directive: DangerDirective,
+): ParsedScene {
+  const zh = cartridge.locale === 'zh'
+  const threat = directive.threat
+  const outcome = directive.check?.outcome ?? 'none'
+  const resolvedWell = outcome === 'critical-success' || outcome === 'success'
+  const costly = outcome === 'costly-success'
+  const text = directive.phase === 'warning'
+    ? zh
+      ? `你清楚注意到眼前的异常：${threat}。它尚未失控，但已经不能忽略。`
+      : `You clearly notice the anomaly in front of you: ${threat}. It is not yet out of control, but it can no longer be ignored.`
+    : directive.phase === 'confrontation'
+      ? zh
+        ? `${threat}已经直接逼近，挡住了眼前的调查。你必须确认情况、立即应对或撤离现场。`
+        : `${threat} now closes in and blocks the investigation. You must confirm it, respond, or withdraw.`
+      : zh
+        ? resolvedWell
+          ? `你按刚才选择的方式处理了${threat}，眼前的直接危险已经解除。`
+          : costly
+            ? `你处理了${threat}，直接危险已经解除，但这次应对留下了代价。`
+            : `你尝试处理${threat}，这次没有成功；直接危险已经结束，但后果仍留在现场。`
+        : resolvedWell
+          ? `You address ${threat} with the action you chose, and the immediate danger is resolved.`
+          : costly
+            ? `You address ${threat}; the immediate danger is resolved, but the response leaves a cost.`
+            : `Your attempt to address ${threat} fails. The immediate danger has ended, but its consequence remains at the scene.`
+  const choices = directive.phase === 'resolution'
+    ? zh
+      ? [`确认${threat}结束后留下的痕迹`, `沿着${save.objective || '当前线索'}继续调查`]
+      : [`Inspect what remains after ${threat}`, `Continue investigating ${save.objective || 'the current clue'}`]
+    : contextualDangerChoiceLabels(threat, directive.methods, cartridge.locale)
+  const sceneLocation = save.sceneLocation ?? save.location
+  return {
+    raw: text,
+    blocks: [{ id: `danger-fallback-${save.scene + 1}`, kind: 'narration', text }],
+    commands: [
+      { type: 'scene_location', location: sceneLocation },
+      { type: 'encounter', phase: directive.phase, kind: threat, severity: directive.severity, outcome },
+      { type: 'choices', choices },
+    ],
+  }
+}
+
+/** Repair only saves that are visibly inside the former danger/recovery loop.
+ * Normal authored danger choices remain untouched. */
+export function repairLegacyDangerLoopChoices<T extends {
+  scene: number
+  danger: StoryDangerState
+  choices: StorySave['choices']
+  blocks: StorySave['blocks']
+  facts?: StorySave['facts']
+}>(candidate: T, cartridge: StoryCartridge): T {
+  if (candidate.danger.phase === 'calm' || !candidate.danger.currentThreat || !cartridge.dangerDirector) return candidate
+  const threat = candidate.danger.currentThreat
+  const current = candidate.choices.map((choice) => choice.label.trim())
+  const hasRecoveryBlock = candidate.blocks.some((block) => block.id === `consistency-recovery-${candidate.scene}`)
+  const looksLikeGenericRecovery = current.length > 0 && current.every((label) => (
+    /^(?:查看.+现在能做的事|放弃原计划，改走别的路|确认与这一步有关的路线和线索|暂缓这一步)/u.test(label)
+    || /^(?:Review what can be done|Abandon the current plan|Confirm the route|Pause this step)/i.test(label)
+  ))
+  const concise = threat.replace(/[“”"'‘’。.!！?？；;：:]+/g, ' ').replace(/\s+/g, ' ').trim()
+  const oldQuoted = cartridge.locale === 'zh'
+    ? [`确认“${concise}”的具体情况`, `立即应对“${concise}”`, `撤离“${concise}”影响的现场`]
+    : []
+  const looksLikeQuotedDanger = oldQuoted.length > 0
+    && current.length === oldQuoted.length
+    && current.every((label, index) => label === oldQuoted[index])
+  if (!hasRecoveryBlock && !looksLikeGenericRecovery && !looksLikeQuotedDanger) return candidate
+
+  const replacement = contextualDangerChoiceLabels(threat, cartridge.dangerDirector.methods, cartridge.locale)
+    .map((label, index) => ({ id: `danger-recovery-${candidate.scene}-${index}`, label }))
+  const recordId = `choices-${candidate.scene}`
+  return {
+    ...candidate,
+    choices: replacement,
+    blocks: candidate.blocks.map((block) => block.id === recordId && block.kind === 'choices'
+      ? { ...block, text: encodeChoiceRecord(replacement) }
+      : block),
+    ...(candidate.facts ? { facts: { ...candidate.facts, 'red-light-danger-loop-repaired-v1': true } } : {}),
+  }
 }
 
 /** Rewrite only exact legacy danger-method labels that are still actionable in

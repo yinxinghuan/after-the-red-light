@@ -11,7 +11,7 @@ import { isStoryProtocolResidue, parseStoryProtocol } from './engine/protocol'
 import { bindChoiceDestinations, canCommitDisplayedChoiceWithoutGeneratedReplies, inferActionDestination, repairPersistedMapRouteHints } from './engine/turnConsistency'
 import { prepareTurnCandidate } from './engine/turnPipeline'
 import { shouldUsePlayerImageReference, upgradePendingSceneImagePrompts } from './engine/imageDirector'
-import { buildDangerDirective, normalizeDangerState, repairLegacyDangerMethodChoices } from './engine/dangerDirector'
+import { buildDangerDirective, createDangerFallbackScene, normalizeDangerState, repairLegacyDangerLoopChoices, repairLegacyDangerMethodChoices } from './engine/dangerDirector'
 import { activeStatFloorRule, domainSuppressesDanger, repairDomainRepeatState, repairEndedSessionChoices, repairLegacyDomainChoiceReset, resolveDomainAction, statFloorChoices, syncDomainDerivedState } from './engine/domainRules'
 import { repairUnsettledContractPayment } from './engine/paymentConsistency'
 import { resolveDeterministicChoiceTurn, resolveDeterministicOpeningTurn } from './engine/authoredTurns'
@@ -90,9 +90,13 @@ function recoverPersistedChoices(candidate: LegacyStorySave, cartridge: StoryCar
 export function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge: StoryCartridge, incomingChatId?: string): StorySave {
   if (!candidate || candidate.cartridgeId !== cartridge.id || !Array.isArray(candidate.blocks)) return createInitialSave(cartridge, incomingChatId)
   if (incomingChatId && candidate.remoteChatId && candidate.remoteChatId !== incomingChatId) return createInitialSave(cartridge, incomingChatId)
-  const repaired = repairLegacyConsistencyRecovery(repairUnsettledContractPayment(
+  const consistencyRepaired = repairLegacyConsistencyRecovery(repairUnsettledContractPayment(
     recoverPersistedChoices(repairMockLoop(candidate, cartridge), cartridge), cartridge,
   ), cartridge)
+  const repaired = repairLegacyDangerLoopChoices({
+    ...consistencyRepaired,
+    danger: normalizeDangerState(consistencyRepaired.danger),
+  }, cartridge)
   let blocks = repaired.blocks.filter((block) => !(block.kind === 'narration' && isStoryProtocolResidue(block.text)))
   if (!blocks.some((block) => block.kind === 'image')) {
     const legacyPrompt = repaired.imagePrompt?.trim() ?? ''
@@ -344,7 +348,11 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
         : authoredTurn
           ? { content: authoredTurn.content, imagePrompt: authoredTurn.imagePrompt, imageSubject: authoredTurn.imageSubject, imageCharacterId: authoredTurn.imageCharacterId }
         : await adapter.send(normalizedAction, { cartridge: activeCartridge, save: base, actionId: normalizedAction, locale: actionLocale, dangerDirective }, setProgress)
-      let parsed = parseStoryProtocol(result.content, actionLocale)
+      let parsed = domainResolution?.status === 'accepted'
+        && domainResolution.dangerPolicy === 'advance'
+        && dangerDirective
+        ? createDangerFallbackScene(base, activeCartridge, dangerDirective)
+        : parseStoryProtocol(result.content, actionLocale)
       if (!domainResolution) {
         let prepared = prepareTurnCandidate({
           save: base, parsed, cartridge: activeCartridge, action: normalizedAction,
@@ -383,6 +391,20 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
               commit((current) => applyParsedScene(
                 localizeKnownState(current, cartridge, activeCartridge), parsed, activeCartridge, normalizedAction,
                 result.imagePrompt, result.imageSubject, dangerDirective, undefined, result.imageCharacterId, presetEventResolution,
+              ))
+              setPendingAction('')
+              setProgress(null)
+              return
+            }
+            if (dangerDirective) {
+              commit((current) => applyParsedScene(
+                localizeKnownState(current, cartridge, activeCartridge),
+                createDangerFallbackScene(base, activeCartridge, dangerDirective),
+                activeCartridge,
+                normalizedAction,
+                undefined,
+                undefined,
+                dangerDirective,
               ))
               setPendingAction('')
               setProgress(null)

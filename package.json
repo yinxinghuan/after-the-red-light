@@ -1,6 +1,6 @@
 {
   "name": "after-the-red-light",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,6 +13,7 @@
     "test:protocol": "node --import tsx _qa/protocol.ts",
     "test:danger": "node --import tsx _qa/danger-director.ts",
     "test:danger-grounding": "node --import tsx _qa/danger-directive-grounding.ts",
+    "test:red-light-loop": "node --import tsx _qa/red-light-loop.ts",
     "test:payment": "node --import tsx _qa/payment-consistency.ts",
     "test:turn": "node --import tsx _qa/turn-consistency.ts",
     "test:dynamic-locations": "node --import tsx _qa/dynamic-locations.ts",

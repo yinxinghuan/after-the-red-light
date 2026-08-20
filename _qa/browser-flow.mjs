@@ -142,6 +142,59 @@ async function assertNoOverflow(page, state) {
   await page.close()
 }
 
+// The resource-response branch previously entered an endless
+// danger → consistency recovery → same danger menu loop.
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  await configure(page)
+  await hideGuestBanner(page)
+  await enter(page)
+  await act(page, '请玛拉说明她为何立即否认九号房')
+  await act(page, '追问第二次邀请')
+  await act(page, '前往二层确认八号房门的位置')
+  await act(page, '点燃一根红色火柴照出被墙藏起的门')
+  let labels = await choiceLabels(page)
+  assert.equal(labels.length, 3)
+  assert.ok(labels.every((label) => label.includes('身后的红灯')))
+  const directResponse = labels.find((label) => label.startsWith('立即应对'))
+  assert.ok(directResponse)
+  await act(page, directResponse)
+  labels = await choiceLabels(page)
+  const aftermath = labels.find((label) => label.includes('结束后留下的痕迹'))
+    ?? labels.find((label) => label.includes('检查发出收缩声的空墙'))
+  assert.ok(aftermath)
+  assert.equal(await page.locator('[data-block-id^="consistency-recovery-"]').count(), 0)
+  await act(page, aftermath)
+  assert.ok((await page.locator('.st-conversation').innerText()).includes('没有门牌的暗红房门'))
+  assert.equal(await page.locator('[data-block-id^="consistency-recovery-"]').count(), 0)
+  await page.screenshot({ path: evidencePath('platform-layout-red-light-loop-exit-390x844.png'), fullPage: true })
+  await page.close()
+}
+
+// The authored room-order choice previously skipped warning straight to a
+// resolution draft. It now owns a real confrontation step before settlement.
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  await configure(page)
+  await hideGuestBanner(page)
+  await enter(page)
+  await act(page, '请玛拉说明她为何立即否认九号房')
+  await act(page, '追问第二次邀请')
+  await act(page, '前往二层确认八号房门的位置')
+  await act(page, '说明红灯熄灭的房号顺序')
+  const labels = await choiceLabels(page)
+  assert.deepEqual(labels, [
+    '询问熄灭的红灯为何逼近七号房',
+    '说明熄灭的红灯已经逼近七号房',
+    '点燃一根红色火柴照亮熄灭的红灯',
+  ])
+  assert.equal(await page.locator('[data-block-id^="consistency-recovery-"]').count(), 0)
+  await act(page, '说明熄灭的红灯已经逼近七号房')
+  assert.equal(await page.locator('[data-block-id^="consistency-recovery-"]').count(), 0)
+  assert.ok((await choiceLabels(page)).length >= 1)
+  await page.close()
+}
+
 // Narrow path verifies the second adult character debut and scrolling layout.
 {
   const page = await browser.newPage({ viewport: { width: 320, height: 568 }, deviceScaleFactor: 1 })
@@ -208,6 +261,6 @@ async function assertNoOverflow(page, state) {
 await browser.close()
 console.log(JSON.stringify({
   ok: true,
-  paths: ['checkpoint-chain', 'Noa-debut', 'English-danger', 'free-input-boundary', 'media-failure', 'external-guest'],
+  paths: ['checkpoint-chain', 'red-light-loop-exit', 'warning-stage-continuity', 'Noa-debut', 'English-danger', 'free-input-boundary', 'media-failure', 'external-guest'],
   viewports: ['390x844', '320x568'],
 }))

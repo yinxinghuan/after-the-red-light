@@ -1,4 +1,5 @@
 import type {
+  DemoTurn,
   DomainActionRule,
   PresetEventDefinition,
   StoryCartridge,
@@ -412,34 +413,45 @@ function build(locale: Language): StoryCartridge {
 
 function attachDeterministicChoiceTurns(cartridge: StoryCartridge): StoryCartridge {
   const zh = cartridge.locale === 'zh'
-  const specs: Array<[string, number]> = zh ? [
-    ['追问第二次邀请', 0],
-    ['查看黄铜目录', 1],
-    ['请玛拉拿出今晚的房间登记', 1],
-    ['前往二层确认八号房门的位置', 2],
-    ['带着她的警告前往二层八号房', 2],
-    ['带着两张楼层图前往二层走廊', 2],
-    ['走向仍亮着红灯的七号房', 3],
-    ['说明红灯熄灭的房号顺序', 4],
-    ['说明熄灭的红灯已经逼近七号房', 4],
-    ['检查发出收缩声的空墙', 5],
-    ['拒绝暗红房门的邀请', 6],
+  const orderConfrontation: DemoTurn = zh ? {
+    match: [],
+    content: `你按七、八、十的顺序逐一说出已经熄灭的红灯。走廊把你的声音原样送回来，熄灭的顺序没有停止；七号房外最后那盏亮灯开始忽明忽暗，空墙里则传出与你同步的呼吸声。
+[encounter: phase="confrontation" kind="身后的红灯一盏接一盏熄灭" severity="2" outcome="active"]
+[choices: "询问熄灭的红灯为何逼近七号房"|"说明熄灭的红灯已经逼近七号房"|"点燃一根红色火柴照亮熄灭的红灯"]`,
+  } : {
+    match: [],
+    content: `You name the failed lamps in order—Seven, Eight, Ten. The corridor returns your voice unchanged, but the sequence does not stop. The last lit lamp outside Room Seven begins to falter, while the blank wall breathes in time with you.
+[encounter: phase="confrontation" kind="the red lamps go dark one by one behind you" severity="2" outcome="active"]
+[choices: "Ask why the dying red lamps reached Room Seven"|"Say the darkening red lamps reached Room Seven"|"Use one red match on the dying red lamps"]`,
+  }
+  const specs: Array<[string, DemoTurn]> = zh ? [
+    ['追问第二次邀请', cartridge.demoTurns[0]],
+    ['查看黄铜目录', cartridge.demoTurns[1]],
+    ['请玛拉拿出今晚的房间登记', cartridge.demoTurns[1]],
+    ['前往二层确认八号房门的位置', cartridge.demoTurns[2]],
+    ['带着她的警告前往二层八号房', cartridge.demoTurns[2]],
+    ['带着两张楼层图前往二层走廊', cartridge.demoTurns[2]],
+    ['走向仍亮着红灯的七号房', cartridge.demoTurns[3]],
+    ['说明红灯熄灭的房号顺序', orderConfrontation],
+    ['说明熄灭的红灯已经逼近七号房', cartridge.demoTurns[4]],
+    ['检查发出收缩声的空墙', cartridge.demoTurns[5]],
+    ['拒绝暗红房门的邀请', cartridge.demoTurns[6]],
   ] : [
-    ['Ask about the second invitation', 0],
-    ['Inspect the brass directory', 1],
-    ["Ask Mara to show tonight’s room register", 1],
-    ['Go upstairs and verify the position of Room Eight', 2],
-    ['Take her warning upstairs to Room Eight', 2],
-    ['Take both floor plans to the second-floor corridor', 2],
-    ['Go to lit Room Seven', 3],
-    ['Check the red lamps in room order', 4],
-    ['Say the darkening red lamps reached Room Seven', 4],
-    ['Inspect the blank wall that contracted', 5],
-    ['Decline the oxblood door invitation', 6],
+    ['Ask about the second invitation', cartridge.demoTurns[0]],
+    ['Inspect the brass directory', cartridge.demoTurns[1]],
+    ["Ask Mara to show tonight’s room register", cartridge.demoTurns[1]],
+    ['Go upstairs and verify the position of Room Eight', cartridge.demoTurns[2]],
+    ['Take her warning upstairs to Room Eight', cartridge.demoTurns[2]],
+    ['Take both floor plans to the second-floor corridor', cartridge.demoTurns[2]],
+    ['Go to lit Room Seven', cartridge.demoTurns[3]],
+    ['Check the red lamps in room order', orderConfrontation],
+    ['Say the darkening red lamps reached Room Seven', cartridge.demoTurns[4]],
+    ['Inspect the blank wall that contracted', cartridge.demoTurns[5]],
+    ['Decline the oxblood door invitation', cartridge.demoTurns[6]],
   ]
   return {
     ...cartridge,
-    deterministicChoiceTurns: specs.map(([action, turnIndex]) => ({ action, turn: cartridge.demoTurns[turnIndex] })),
+    deterministicChoiceTurns: specs.map(([action, turn]) => ({ action, turn })),
   }
 }
 

@@ -763,7 +763,11 @@ export function applyParsedScene(
     .map((block) => block.text.trim()).filter(Boolean).join(' ')
   const effects: StoryBlock[] = []
   let dangerCheckAdded = false
-  const adjudicatedParsed: ParsedScene = domainResolution ? { ...parsed, commands: [] } : parsed
+  const adjudicatedParsed: ParsedScene = domainResolution
+    ? domainResolution.status === 'accepted' && domainResolution.dangerPolicy === 'advance' && activeDangerDirective
+      ? { ...parsed, commands: parsed.commands.filter((command) => command.type === 'encounter' || command.type === 'skill_check') }
+      : { ...parsed, commands: [] }
+    : parsed
 
   const commands = [...parsed.commands, ...inferInventoryCommands(parsed, cartridge)]
     .filter((command) => domainAllowsModelCommand(command, domainResolution))
