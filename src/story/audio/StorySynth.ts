@@ -13,13 +13,19 @@ export const SYNTH_AMBIENT_PROFILE = {
 } as const
 
 export const RECORDED_SOUND_PROFILE = {
-  musicRepeatDelayMs: 5_000,
+  musicRepeatDelayMs: 30_000,
   ambienceRepeatDelayMs: 7_000,
   maxCueVoices: 4,
+  featureCooldownMs: 180_000,
 } as const
 
 export function resolveRecordedAmbience(theme: StoryAudioTheme, locationId?: string): StoryRecordedTrack | undefined {
   return (locationId ? theme.recorded?.ambienceByLocationId?.[locationId] : undefined) ?? theme.recorded?.ambience
+}
+
+export function isRecordedFeatureReady(track: StoryRecordedTrack, active: boolean, lastPlayedAt: number, now = Date.now()): boolean {
+  if (track.role !== 'feature' || active) return false
+  return now - lastPlayedAt >= (track.cooldownMs ?? RECORDED_SOUND_PROFILE.featureCooldownMs)
 }
 
 function safeTrackGain(track: StoryRecordedTrack | undefined): number {
@@ -96,6 +102,8 @@ export class StorySynth {
   private recordedMusicTimer: number | null = null
   private recordedAmbienceTimer: number | null = null
   private recordedCueVoices = new Set<HTMLAudioElement>()
+  private recordedFeatureVoice: HTMLAudioElement | null = null
+  private recordedFeatureLastPlayed = new Map<string, number>()
 
   get supported(): boolean {
     return Boolean(contextConstructor())
@@ -158,7 +166,10 @@ export class StorySynth {
     this.applyLevels(.12)
     this.applyRecordedLevels()
     if (!changed) return
-    if (muted) this.pauseRecordedBeds()
+    if (muted) {
+      this.stopRecordedCueVoices(false)
+      this.pauseRecordedBeds()
+    }
     else if (this.unlocked && this.context?.state === 'running') this.resumeRecordedBeds()
   }
 
@@ -168,7 +179,10 @@ export class StorySynth {
       if (!visible && this.context.state === 'running') await this.context.suspend()
       const state = String(this.context.state)
       if (visible && !this.muted && state !== 'running' && state !== 'closed') await this.context.resume()
-      if (!visible) this.pauseRecordedBeds()
+      if (!visible) {
+        this.stopRecordedCueVoices(false)
+        this.pauseRecordedBeds()
+      }
       else if (!this.muted) this.resumeRecordedBeds()
     } catch {
       // Audio is optional and must never affect the story.
@@ -315,7 +329,7 @@ export class StorySynth {
   private playRecordedBed(kind: 'music' | 'ambient'): void {
     const element = kind === 'music' ? this.recordedMusic : this.recordedAmbience
     const track = kind === 'music' ? this.recordedMusicTrack : this.recordedAmbienceTrack
-    if (!element || !track || this.muted || document.hidden) return
+    if (!element || !track || this.muted || document.hidden || (kind === 'music' && this.recordedFeatureVoice)) return
     this.clearRecordedTimer(kind)
     this.applyRecordedLevels()
     void element.play()
@@ -332,7 +346,7 @@ export class StorySynth {
   }
 
   private scheduleRecordedReplay(kind: 'music' | 'ambient'): void {
-    if (this.muted || document.hidden) return
+    if (this.muted || document.hidden || (kind === 'music' && this.recordedFeatureVoice)) return
     this.clearRecordedTimer(kind)
     const delay = kind === 'music' ? RECORDED_SOUND_PROFILE.musicRepeatDelayMs : RECORDED_SOUND_PROFILE.ambienceRepeatDelayMs
     const timer = window.setTimeout(() => {
@@ -359,7 +373,7 @@ export class StorySynth {
   }
 
   private resumeRecordedBeds(): void {
-    if (this.recordedMusicTrack) this.playRecordedBed('music')
+    if (this.recordedMusicTrack && !this.recordedFeatureVoice) this.playRecordedBed('music')
     if (this.recordedAmbienceTrack) this.playRecordedBed('ambient')
   }
 
@@ -372,14 +386,43 @@ export class StorySynth {
   private playRecordedCue(cue: StoryAudioCue): boolean {
     const track = this.theme?.recorded?.cues?.[cue]
     if (!track || typeof Audio === 'undefined' || this.recordedCueVoices.size >= RECORDED_SOUND_PROFILE.maxCueVoices) return false
+    const isFeature = track.role === 'feature'
+    const lastPlayed = this.recordedFeatureLastPlayed.get(track.src) ?? -Infinity
+    if (isFeature && !isRecordedFeatureReady(track, Boolean(this.recordedFeatureVoice), lastPlayed)) return false
     const element = this.createRecordedElement(track)
     if (!element) return false
     element.volume = clampUnit(this.theme?.levels.master ?? 0) * safeTrackGain(track)
     this.recordedCueVoices.add(element)
-    const cleanup = () => { element.pause(); this.recordedCueVoices.delete(element) }
-    element.onended = cleanup
-    void element.play().catch(() => { cleanup(); this.playSynthCue(cue) })
+    if (isFeature) {
+      this.clearRecordedTimer('music')
+      this.recordedMusic?.pause()
+      this.recordedFeatureVoice = element
+    }
+    const cleanup = (resumeMusic = true) => {
+      element.pause()
+      this.recordedCueVoices.delete(element)
+      if (this.recordedFeatureVoice === element) {
+        this.recordedFeatureVoice = null
+        if (resumeMusic && !this.muted && !document.hidden && this.unlocked) this.playRecordedBed('music')
+      }
+    }
+    element.onended = () => cleanup()
+    void element.play()
+      .then(() => {
+        if (isFeature) this.recordedFeatureLastPlayed.set(track.src, Date.now())
+      })
+      .catch(() => { cleanup(); this.playSynthCue(cue) })
     return true
+  }
+
+  private stopRecordedCueVoices(resumeMusic: boolean): void {
+    this.recordedCueVoices.forEach((element) => {
+      element.onended = null
+      element.pause()
+    })
+    this.recordedCueVoices.clear()
+    this.recordedFeatureVoice = null
+    if (resumeMusic && !this.muted && !document.hidden && this.unlocked) this.playRecordedBed('music')
   }
 
   private stopRecordedAudio(): void {
@@ -388,8 +431,8 @@ export class StorySynth {
     this.recordedAmbience = null
     this.recordedMusicTrack = undefined
     this.recordedAmbienceTrack = undefined
-    this.recordedCueVoices.forEach((element) => element.pause())
-    this.recordedCueVoices.clear()
+    this.stopRecordedCueVoices(false)
+    this.recordedFeatureLastPlayed.clear()
   }
 
   private createGraph(): void {

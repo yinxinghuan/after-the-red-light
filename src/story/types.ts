@@ -23,7 +23,7 @@ export type StoryAudioCueName =
   | 'open' | 'action' | 'success' | 'failure' | 'change' | 'discovery' | 'treasure' | 'image' | 'summary' | 'error'
   | 'coinGain' | 'coinSpend' | 'energy' | 'standing' | 'relationship' | 'travel' | 'item'
 
-export interface StoryRecordedTrack { src: string; gain: number }
+export interface StoryRecordedTrack { src: string; gain: number; role?: 'effect' | 'feature'; cooldownMs?: number }
 export interface StoryRecordedAudio {
   music?: StoryRecordedTrack
   ambience?: StoryRecordedTrack

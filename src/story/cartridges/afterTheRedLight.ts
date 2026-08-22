@@ -11,6 +11,7 @@ const coverImage = new URL('../img/worlds/after-the-red-light.webp', import.meta
 const entryImage = new URL('../img/worlds/after-the-red-light-entry.webp', import.meta.url).href
 const audioThemeUrl = new URL('../audio/assets/theme.mp3', import.meta.url).href
 const audioAmbienceUrl = new URL('../audio/assets/ambience.mp3', import.meta.url).href
+const audioFeatureUrl = new URL('../audio/assets/feature.mp3', import.meta.url).href
 
 type Language = 'zh' | 'en'
 
@@ -176,7 +177,7 @@ function build(locale: Language): StoryCartridge {
     },
     theme: { outer: '#100c0e', surface: '#201518', paper: '#e8ddc8', ink: '#2b2021', muted: '#776a65', accent: '#8f3d47', danger: '#c05249', gold: '#b08a57', material: 'apartment' },
     audioTheme: {
-      recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .27 } },
+      recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .27 }, cues: { discovery: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, relationship: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, summary: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 } } },
       material: 'apartment', bpm: 48, rootHz: 98, scale: [0, 3, 5, 7, 10],
       levels: { music: .11, ambient: .13, sfx: .22, master: .3 },
       tension: [{ statId: 'composure', direction: 'low', weight: .48 }, { statId: 'desire', direction: 'high', weight: .42 }, { statId: 'clues', direction: 'low', weight: .1 }],
