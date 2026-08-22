@@ -494,17 +494,11 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange }: { cartridge
     if (added.length) {
       const summary = added.some((block) => block.kind === 'summary')
       const check = added.find((block) => block.kind === 'check')
-      const discovery = added.some((block) => block.kind === 'event' && !block.id.startsWith('action-'))
       const treasure = added.some((block) => block.kind === 'change' && (block.data?.rarity === 'rare' || block.data?.rarity === 'legendary'))
-      const change = added.some((block) => block.kind === 'change')
       if (summary) audio.cue('summary')
       else if (treasure) audio.cue('treasure')
       else if (check) audio.cue(checkPassed(check) ? 'success' : 'failure')
-      else if (discovery) audio.cue('discovery')
-      else if (change) audio.cue('change')
-      else audio.cue('change')
     }
-    newlyReadyImages.forEach(() => audio.cue('image'))
     audioBlockCount.current = engine.save.blocks.length
     readyAudioImages.current = readyImages
     // A late image above the latest reply changes the feed geometry after the

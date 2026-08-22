@@ -4,7 +4,12 @@ export type StoryAudioCue = StoryAudioCueName
 
 type AudioContextConstructor = typeof AudioContext
 type StoppableNode = AudioBufferSourceNode | OscillatorNode
-const MAX_TRANSIENT_VOICES = 14
+const MAX_TRANSIENT_VOICES = 6
+
+export const SFX_OUTPUT_PROFILE = {
+  gainScale: .52,
+  minimumCueIntervalSeconds: .18,
+} as const
 
 export const SYNTH_AMBIENT_PROFILE = {
   textureSeconds: 19,
@@ -15,7 +20,7 @@ export const SYNTH_AMBIENT_PROFILE = {
 export const RECORDED_SOUND_PROFILE = {
   musicRepeatDelayMs: 30_000,
   ambienceRepeatDelayMs: 7_000,
-  maxCueVoices: 4,
+  maxCueVoices: 2,
   featureCooldownMs: 180_000,
 } as const
 
@@ -93,6 +98,7 @@ export class StorySynth {
   private ambientConnections: AudioNode[] = []
   private ambientDetailTimer: number | null = null
   private activeVoices = 0
+  private lastCueStartedAt = -Infinity
   private stateListener: ((running: boolean) => void) | null = null
   private locationId = ''
   private recordedMusic: HTMLAudioElement | null = null
@@ -193,6 +199,8 @@ export class StorySynth {
     const context = this.context
     const theme = this.theme
     if (!context || !theme || this.muted || context.state !== 'running') return
+    if (context.currentTime - this.lastCueStartedAt < SFX_OUTPUT_PROFILE.minimumCueIntervalSeconds) return
+    this.lastCueStartedAt = context.currentTime
     if (this.playRecordedCue(cue)) return
     this.playSynthCue(cue)
   }
@@ -203,77 +211,59 @@ export class StorySynth {
     const softer = theme.material === 'apartment'
     const woody = theme.material === 'wayfarer'
     if (cue === 'open') {
-      this.woodKnock(.15)
-      this.metalStrike(.075, .11, true)
-      this.tone('sfx', 92, 72, .62, 'sine', .055, .04)
+      this.woodKnock(.08)
     }
     if (cue === 'action') {
-      this.paperFlick(woody ? .12 : softer ? .095 : .14)
-      this.woodKnock(woody ? .075 : .065, .055)
+      this.paperFlick(woody ? .06 : softer ? .048 : .065)
     }
     if (cue === 'success') {
-      this.woodKnock(.14)
-      this.tone('sfx', 294, 292, .42, 'sine', .07, .035)
-      this.tone('sfx', 438, 434, .34, 'sine', .042, .035)
+      this.woodKnock(.075)
+      this.tone('sfx', 342, 338, .32, 'sine', .034, .03)
     }
     if (cue === 'failure' || cue === 'error') {
-      this.woodKnock(cue === 'error' ? .12 : .09)
-      this.tone('sfx', cue === 'error' ? 118 : 104, cue === 'error' ? 69 : 78, cue === 'error' ? .18 : .34, 'triangle', cue === 'error' ? .07 : .052, .025)
-      if (cue === 'error') this.woodKnock(.06, .115)
+      this.tone('sfx', cue === 'error' ? 118 : 104, cue === 'error' ? 69 : 78, cue === 'error' ? .18 : .3, 'triangle', cue === 'error' ? .055 : .04)
     }
     if (cue === 'change') {
       this.woodKnock(.065)
     }
     if (cue === 'discovery') {
-      this.filteredNoise('sfx', .26, 1850, .07, 0, .55)
-      this.woodKnock(.08, .08)
-      this.tone('sfx', 132, 96, .72, 'sine', .038, .04)
+      this.filteredNoise('sfx', .2, 1850, .04, 0, .55)
+      this.tone('sfx', 132, 96, .55, 'sine', .025, .04)
     }
     if (cue === 'treasure') {
-      this.paperFlick(.095)
-      this.metalStrike(.11, .07)
-      this.woodKnock(.07, .18)
+      this.paperFlick(.052)
+      this.metalStrike(.065, .06)
     }
     if (cue === 'image') {
       // Dry brush across cold-press paper; avoid the old electronic two-note ping.
-      this.filteredNoise('sfx', .22, 2600, .085, 0, .48)
-      this.filteredNoise('sfx', .12, 5100, .038, .09, .65)
-      this.woodKnock(.038, .18)
+      this.filteredNoise('sfx', .18, 2600, .04, 0, .48)
     }
     if (cue === 'summary') {
-      this.paperFlick(.075)
-      this.woodKnock(.09, .12)
-      this.tone('sfx', 110, 82, .84, 'sine', .035, .08)
+      this.paperFlick(.045)
+      this.tone('sfx', 110, 82, .72, 'sine', .024, .06)
     }
     if (cue === 'coinGain') {
-      this.metalStrike(.13)
-      this.woodKnock(.048, .045)
+      this.metalStrike(.07)
     }
     if (cue === 'coinSpend') {
-      this.metalStrike(.08, 0, true)
-      this.woodKnock(.07, .025)
+      this.metalStrike(.052, 0, true)
     }
     if (cue === 'energy') {
-      this.filteredNoise('sfx', .16, 980, .06, 0, .45)
-      this.tone('sfx', 132, 94, .32, 'triangle', .038, .015)
+      this.filteredNoise('sfx', .14, 980, .035, 0, .45)
     }
     if (cue === 'standing') {
-      this.metalStrike(.065, 0, true)
-      this.woodKnock(.045, .06)
+      this.woodKnock(.04)
     }
     if (cue === 'relationship') {
-      this.woodKnock(.06)
-      this.woodKnock(.05, .12)
-      this.tone('sfx', 196, 194, .48, 'sine', .032, .08)
+      this.woodKnock(.045)
+      this.tone('sfx', 196, 194, .4, 'sine', .024, .08)
     }
     if (cue === 'travel') {
       this.railJoint(0)
-      this.railJoint(.34)
-      this.tone('sfx', 86, 61, 1.05, 'sine', .052, .06)
+      this.tone('sfx', 86, 61, .72, 'sine', .032, .05)
     }
     if (cue === 'item') {
-      this.paperFlick(.08)
-      this.woodKnock(.07, .09)
+      this.paperFlick(.05)
     }
   }
 
@@ -391,7 +381,8 @@ export class StorySynth {
     if (isFeature && !isRecordedFeatureReady(track, Boolean(this.recordedFeatureVoice), lastPlayed)) return false
     const element = this.createRecordedElement(track)
     if (!element) return false
-    element.volume = clampUnit(this.theme?.levels.master ?? 0) * safeTrackGain(track)
+    const cueScale = isFeature ? 1 : SFX_OUTPUT_PROFILE.gainScale
+    element.volume = clampUnit(this.theme?.levels.master ?? 0) * safeTrackGain(track) * cueScale
     this.recordedCueVoices.add(element)
     if (isFeature) {
       this.clearRecordedTimer('music')
@@ -486,7 +477,7 @@ export class StorySynth {
     ramp(this.master.gain, this.muted ? 0 : this.theme.levels.master)
     ramp(this.music.gain, this.theme.levels.music)
     ramp(this.ambient.gain, this.theme.levels.ambient)
-    ramp(this.sfx.gain, this.theme.levels.sfx)
+    ramp(this.sfx.gain, this.theme.levels.sfx * SFX_OUTPUT_PROFILE.gainScale)
   }
 
   private startAmbient(): void {
@@ -674,7 +665,7 @@ export class StorySynth {
   private metalStrike(level: number, delay = 0, muted = false): void {
     const base = muted ? 610 : 760
     const duration = muted ? .22 : .42
-    ;[1, 1.47, 2.13, 2.76].forEach((ratio, index) => {
+    ;[1, 1.82].forEach((ratio, index) => {
       const partial = base * ratio
       this.tone('sfx', partial, partial * (muted ? .985 : .997), duration * (1 - index * .11), 'sine', level * (1 - index * .2), delay + index * .004)
     })
