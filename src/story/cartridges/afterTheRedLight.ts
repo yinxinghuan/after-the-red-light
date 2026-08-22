@@ -179,7 +179,7 @@ function build(locale: Language): StoryCartridge {
     audioTheme: {
       recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .27 }, cues: { discovery: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, relationship: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, summary: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 } } },
       material: 'apartment', bpm: 48, rootHz: 98, scale: [0, 3, 5, 7, 10],
-      levels: { music: .11, ambient: .13, sfx: .22, master: .3 },
+      levels: { music: .11, ambient: .13, sfx: .045, master: .3 },
       tension: [{ statId: 'composure', direction: 'low', weight: .48 }, { statId: 'desire', direction: 'high', weight: .42 }, { statId: 'clues', direction: 'low', weight: .1 }],
     },
     itemImageDirection: 'decayed boutique-hotel evidence still life, oxblood velvet, nicotine ivory paper, tarnished brass, controlled side light, object only, no people, no readable text',
