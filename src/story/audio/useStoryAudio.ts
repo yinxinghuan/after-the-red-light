@@ -28,10 +28,11 @@ export function useStoryAudio(cartridge: StoryCartridge, save: StorySave) {
   const [muted, setMutedState] = useState(readMuted)
   const [ready, setReady] = useState(false)
   const statSignature = cartridge.audioTheme.tension.map((source) => `${source.statId}:${save.stats[source.statId] ?? 0}`).join('|')
+  const locationId = save.entered ? save.map.find((node) => node.current)?.id : undefined
 
   useEffect(() => {
-    synthRef.current?.configure(cartridge.audioTheme, calculateTension(cartridge, save))
-  }, [cartridge, statSignature])
+    synthRef.current?.configure(cartridge.audioTheme, calculateTension(cartridge, save), locationId)
+  }, [cartridge, locationId, statSignature])
 
   useEffect(() => {
     synthRef.current?.setMuted(muted)
@@ -64,9 +65,15 @@ export function useStoryAudio(cartridge: StoryCartridge, save: StorySave) {
     })()
   }, [muted, unlock])
   const toggle = useCallback(() => {
-    if (muted || !ready) {
+    if (muted) {
       setMutedState(false)
       synthRef.current?.setMuted(false)
+      if (ready) synthRef.current?.cue('open')
+      else void unlock().then((running) => { if (running) synthRef.current?.cue('open') })
+      return
+    }
+    if (!ready) {
+      setMutedState(false)
       void unlock().then((running) => { if (running) synthRef.current?.cue('open') })
       return
     }

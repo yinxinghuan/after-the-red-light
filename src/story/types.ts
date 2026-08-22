@@ -16,6 +16,19 @@ export interface StoryAudioTheme {
   scale: number[]
   levels: { music: number; ambient: number; sfx: number; master: number }
   tension: Array<{ statId: string; direction: 'high' | 'low'; weight: number }>
+  recorded?: StoryRecordedAudio
+}
+
+export type StoryAudioCueName =
+  | 'open' | 'action' | 'success' | 'failure' | 'change' | 'discovery' | 'treasure' | 'image' | 'summary' | 'error'
+  | 'coinGain' | 'coinSpend' | 'energy' | 'standing' | 'relationship' | 'travel' | 'item'
+
+export interface StoryRecordedTrack { src: string; gain: number }
+export interface StoryRecordedAudio {
+  music?: StoryRecordedTrack
+  ambience?: StoryRecordedTrack
+  ambienceByLocationId?: Record<string, StoryRecordedTrack>
+  cues?: Partial<Record<StoryAudioCueName, StoryRecordedTrack>>
 }
 
 export interface StatDefinition {

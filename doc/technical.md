@@ -63,3 +63,6 @@ doc/                               # 需求、视觉、技术和世界 brief
 - 改视觉与响应式：编辑 `src/story/story.less`，保持 44×44 触控目标、320×568/390×844 无横向溢出与阅读锚点。
 - 加后端：游戏内容层不得写死旧 UUID 或私有媒体接口；平台接口继续走 bridge，自有 Worker 才按 `/<GAME_ID>/api/*` 合同接入。
 - 发布前至少运行 `npm run test:world`、`npm run test:red-light-loop`、`npm run test:loop-escape`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收；浏览器路径必须包含“进入二层 → 点燃火柴 → 直接应对 → 继续调查”，并断言没有 `consistency-recovery` 场景。失败推荐回归还必须覆盖：保留同级选项、连续失败集合单调缩小、零快捷项读档不复生、旧存档一次迁移、错误地点固定行动不可执行。
+## 2026-08-23 混合音频升级
+
+`src/story/audio/` 现在使用本作专属的成人心理恐怖主题与酒店夜间环境声，精确操作与危险反馈仍由 Web Audio 负责。自动播放失败、静音、后台切换或音频缺失都不会推进、回滚或阻塞权威故事状态。
