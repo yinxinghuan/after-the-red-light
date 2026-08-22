@@ -1,6 +1,6 @@
 import { listCartridges } from '../src/story/cartridges/index'
 import { parseStoryProtocol } from '../src/story/engine/protocol'
-import { applyConsistencyRecovery, applyConsistencyRecoverySelection, applyDisplayedRouteFallback, applyParsedScene, createInitialSave, repairLegacyConsistencyRecovery, resolveConsistencyRecoverySelection, restoreDeterministicRecoveryChoice } from '../src/story/engine/reducer'
+import { applyConsistencyRecovery, applyDisplayedRouteFallback, applyParsedScene, createChoiceRecordBlock, createInitialSave, repairLegacyConsistencyRecovery, restoreDeterministicRecoveryChoice } from '../src/story/engine/reducer'
 import { canCommitDisplayedChoiceWithoutGeneratedReplies, canCommitGeneratedTurnWithoutReplies, canonicalizeTurnMetadata, inferActionDestination, validateTurnConsistency } from '../src/story/engine/turnConsistency'
 import { decodeChoiceRecord } from '../src/story/engine/choiceInput'
 import { resolveDeterministicChoiceTurn, resolveDeterministicOpeningTurn } from '../src/story/engine/authoredTurns'
@@ -153,7 +153,7 @@ const restoredContract = restoreDeterministicRecoveryChoice(contractedRecovery, 
 equal(restoredContract.choices[0]?.label, contractedAction, 'legacy recovery restores a now-authoritative valid action')
 ok(Boolean(resolveDeterministicChoiceTurn(restoredContract, contractedCartridge, contractedAction)), 'restored contract executes locally')
 
-const action = `前往${destination}寻找失踪的向导`
+const action = initial.choices[0].label
 const recovery = applyConsistencyRecovery(initial, cartridge, action)
 equal(recovery.scene, initial.scene + 1, 'consistency recovery records exactly one attempted turn')
 equal(recovery.location, initial.location, 'recovery cannot teleport the player')
@@ -164,51 +164,40 @@ ok(recovery.blocks.some((block) => block.id === `consistency-recovery-${recovery
 const recoveryRecord = recovery.blocks.find((block) => block.id === `choices-${recovery.scene}`)
 equal(recoveryRecord?.kind, 'choices', 'recovery persists its visible choice record')
 ok(!decodeChoiceRecord(recoveryRecord?.text ?? '').includes(action), 'saved recovery record excludes the failed action')
+ok(!recovery.choices.some((choice) => /查看.+现在能做的事|放弃原计划|查明手中房卡/.test(choice.label)), 'quarantine never creates a synthetic menu or objective button')
 
-const inspectAction = recovery.choices[0].label
-const inspectSelection = resolveConsistencyRecoverySelection(recovery, cartridge, inspectAction)
-equal(inspectSelection?.mode, 'confirm', 'inspect-current-actions is a local recovery exit')
-const inspected = applyConsistencyRecoverySelection(recovery, cartridge, inspectAction, inspectSelection!)
-ok(!inspected.choices.some((choice) => choice.label === action), 'inspect exit cannot recreate the quarantined action')
-equal(new Set(inspected.choices.map((choice) => choice.label)).size, inspected.choices.length, 'inspect exit restores unique choices')
-ok(inspected.blocks.some((block) => block.data?.consistencyRecoveryExit === 'confirm'), 'inspect exit writes a deterministic local explanation')
-ok(!inspected.blocks.some((block) => block.id === `consistency-recovery-${inspected.scene}`), 'inspect exit cannot create another model recovery scene')
-const recoveryWithParty = {
-  ...recovery,
-  objective: '确认当前道路',
-  characters: [...recovery.characters, {
-    id: 'qa-companion', name: '测试同伴', role: '向导', vitality: 80, stress: 0, skills: [],
-    status: 'companion' as const, origin: 'generated' as const, updatedAtScene: recovery.scene, joinedAtScene: recovery.scene,
-  }],
-  partyMemberIds: [...recovery.partyMemberIds, 'qa-companion'],
-}
-const inspectedWithParty = applyConsistencyRecoverySelection(recoveryWithParty, cartridge, inspectAction, inspectSelection!)
-equal(inspectedWithParty.choices.length, 1, 'an unresolved objective remains the only ordinary recovery action')
-equal(inspectedWithParty.choices[0]?.label, '确认当前道路', 'recovery keeps the concrete unresolved objective')
-
-const abandonAction = recovery.choices[1].label
-const abandonSelection = resolveConsistencyRecoverySelection(recovery, cartridge, abandonAction)
-equal(abandonSelection?.mode, 'pause', 'abandon-plan is a local recovery exit')
-const abandoned = applyConsistencyRecoverySelection(recovery, cartridge, abandonAction, abandonSelection!)
-equal(new Set(abandoned.choices.map((choice) => choice.label)).size, abandoned.choices.length, 'abandon exit restores unique choices')
-ok(!abandoned.choices.some((choice) => /确认与这一步|暂缓这一步|查看.+现在能做的事|放弃原计划/.test(choice.label)), 'abandon exit leaves the synthetic recovery menu')
-
-const nested = applyConsistencyRecovery(recovery, cartridge, inspectAction)
+const nested = applyConsistencyRecovery(recovery, cartridge, recovery.choices[0].label)
 ok(!nested.choices.some((choice) => choice.label === action), 'nested recovery never re-offers the original failed generated action')
-equal(new Set(nested.choices.map((choice) => choice.label)).size, 2, 'nested recovery choices cannot duplicate each other')
+equal(new Set(nested.choices.map((choice) => choice.label)).size, 1, 'a second rejected recommendation is removed instead of reopening a recovery menu')
 
+const sole = applyConsistencyRecovery({ ...initial, choices: [{ id: 'sole', label: action }] }, cartridge, action)
+equal(sole.choices.length, 0, 'when no trustworthy sibling remains the tray stays empty and free input remains the escape')
+equal(sole.facts.consistency_quarantined_action, action, 'empty-tray quarantine persists the failed recommendation for reload safety')
+
+const oldScene = initial.scene + 1
 const legacy = {
-  ...recovery,
-  objective: action,
-  choices: recovery.choices.map((choice, index) => ({ ...choice, label: index === 0 ? `观察${initial.location}的新变化` : choice.label })),
-  blocks: recovery.blocks.map((block) => block.id === `consistency-recovery-${recovery.scene}`
-    ? { ...block, text: `你重新确认了眼前的情况，没有把不确定的消息写进旅途记录。${initial.location}的一切仍在继续。` }
-    : block.id === `choices-${recovery.scene}` ? { ...block, text: JSON.stringify(['观察旧地点的新变化', '追查旧路线', '换一种方式']) } : block),
+  ...initial,
+  scene: oldScene,
+  lastActionId: action,
+  choices: [
+    { id: `recovery-${oldScene}-0`, label: `查看${initial.location}现在能做的事` },
+    { id: `recovery-${oldScene}-1`, label: '放弃原计划，改走别的路' },
+  ],
+  blocks: [
+    ...initial.blocks,
+    { id: `action-${oldScene}`, kind: 'event' as const, text: action },
+    { id: `consistency-recovery-${oldScene}`, kind: 'narration' as const, text: `你重新确认了眼前的情况，没有把不确定的消息写进旅途记录。${initial.location}的一切仍在继续。` },
+    createChoiceRecordBlock(oldScene, [
+      { id: `recovery-${oldScene}-0`, label: `查看${initial.location}现在能做的事` },
+      { id: `recovery-${oldScene}-1`, label: '放弃原计划，改走别的路' },
+    ]),
+  ],
 }
 const migrated = repairLegacyConsistencyRecovery(legacy, cartridge)
-equal(migrated.objective, action, 'legacy migration does not invent a different objective')
+equal(migrated.objective, initial.objective, 'legacy migration preserves the authoritative objective')
 ok(!migrated.choices.some((choice) => choice.label === action), 'legacy looping action is removed from the tray')
-ok(!decodeChoiceRecord(migrated.blocks.find((block) => block.id === `choices-${migrated.scene}`)?.text ?? '').includes(action), 'legacy saved record removes the looping action')
+equal(migrated.choices.length, initial.choices.length - 1, 'legacy recovery restores only still-trustworthy sibling choices')
+ok(!migrated.choices.some((choice) => /查看.+现在能做的事|放弃原计划/.test(choice.label)), 'legacy synthetic recovery menu is removed')
 equal(repairLegacyConsistencyRecovery(migrated, cartridge), migrated, 'legacy migration is idempotent')
 
 const routeCartridge = listCartridges('zh').find((candidate) => candidate.id === 'the-wild-road')

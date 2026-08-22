@@ -39,7 +39,9 @@ doc/                               # 需求、视觉、技术和世界 brief
 ## 3. 核心模块
 
 - `afterTheRedLight.ts` 是本游戏内容真源。`build('zh' | 'en')` 定义三项状态、六个初始地点、三名成人角色、八个预设事件、五类地点绑定危险与三个确定性开局。
-- `turnPipeline.ts` 先校验候选回合，再原子提交正文、选择和状态；不完整或矛盾回合不会写入存档。`turnConsistency.ts` 过滤过期地点、断头路、重复行动和与当前事件无关的推荐项。
+- `turnPipeline.ts` 先校验候选回合，再原子提交正文、选择和状态；不完整或矛盾回合不会写入存档。`turnConsistency.ts` 过滤过期地点、断头路、重复行动和与当前事件无关的推荐项；没有结构化权威进展时，还会剔除围绕同一对象的语义改写重试。
+- `authoredTurns.ts` 把固定行动视为带地点、人物或工作前置的作用域合同。Cartridge 已为大厅、二层走廊与九号房门外的所有确定性行动声明地点；旧标签出现在错误现场时既不能执行，也不能进入下一组选项。
+- reducer 的 `applyConsistencyRecovery()` 使用 `consistency-quarantine-v2` 隔离失败推荐：不提交世界变化，删除该动作，保留可信同级选项；没有同级选项时保持快捷栏为空并交给自由输入。`repairLegacyConsistencyRecovery()` 从上一份真实选择记录恢复可信同级项，清除旧“查看这里能做的事 / 放弃原计划”菜单，并通过版本事实保证迁移幂等；`normalizeSave()` 不会在读档时重新补回目标按钮。
 - `continuity.ts` 的 grounding 以当前已经建立的人、地点、物品和上下文证据为准，不要求未来行动逐字复述正文；长期目标不会直接成为按钮。真实抵达新地点后，只要存在本地行动，系统不会把“立即返回刚离开的地点”留作主要推荐。
 - `domainRules.ts` 执行火柴、休息、镇定归零恢复与边界规则；匹配、前置、数值和物品变化都由本地规则一次完成。玩家明确点燃前不会扣火柴。
 - `authorityShadow.ts` 只在 QA 参数 `?authority_shadow=1` 下把新旧候选分类记录到页面内存；它不改界面、不写存档、不上传数据。真实生成 QA 覆盖 3 条分支、9 个回合，最终为 0 空选项、0 一致性恢复和 0 即时地点折返。
@@ -56,8 +58,8 @@ doc/                               # 需求、视觉、技术和世界 brief
 
 - 改故事、角色、地点、事件、数值或成人内容边界：编辑 `src/story/cartridges/afterTheRedLight.ts`，并同步 `doc/world-brief.json` 与 `_qa/world-contract.ts`。
 - 增加原子动作：在 Cartridge 的 `domainRules` 增加唯一规则 ID、前置、结果、叙事和恢复选择；不要在正文里手写数值后果。
-- 调整推荐选项质量：优先改 Cartridge 的目标、地点 capability、危险方法与 authored turn；共享过滤器只有在能惠及所有游戏且带原始候选回放时才修改。运行 `npm run test:choice-quality` 与 `npm run test:authority-replay` 验证未来行动改写、目标复述、抵达折返和资源同义词边界。
+- 调整推荐选项质量：优先改 Cartridge 的目标、地点 capability、危险方法与 authored turn；共享过滤器只有在能惠及所有游戏且带原始候选回放时才修改。运行 `npm run test:choice-quality`、`npm run test:authority-replay` 与 `npm run test:loop-escape`，验证未来行动改写、目标复述、抵达折返、资源同义词、连续失败不复生、语义重试过滤和中英固定行动作用域。
 - 换入口图、封面或海报：替换 `src/story/img/worlds/after-the-red-light-entry.webp`、`after-the-red-light.webp` 和 `public/poster.png`；运行时场景继续使用 `src/shared/runtime/media.ts` 的公共服务合同。
 - 改视觉与响应式：编辑 `src/story/story.less`，保持 44×44 触控目标、320×568/390×844 无横向溢出与阅读锚点。
 - 加后端：游戏内容层不得写死旧 UUID 或私有媒体接口；平台接口继续走 bridge，自有 Worker 才按 `/<GAME_ID>/api/*` 合同接入。
-- 发布前至少运行 `npm run test:world`、`npm run test:red-light-loop`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收；浏览器路径必须包含“进入二层 → 点燃火柴 → 直接应对 → 继续调查”，并断言没有 `consistency-recovery` 场景。
+- 发布前至少运行 `npm run test:world`、`npm run test:red-light-loop`、`npm run test:loop-escape`、冻结引擎回归、统一 validator、secret/storage/API-base 审计和真实浏览器双尺寸验收；浏览器路径必须包含“进入二层 → 点燃火柴 → 直接应对 → 继续调查”，并断言没有 `consistency-recovery` 场景。失败推荐回归还必须覆盖：保留同级选项、连续失败集合单调缩小、零快捷项读档不复生、旧存档一次迁移、错误地点固定行动不可执行。

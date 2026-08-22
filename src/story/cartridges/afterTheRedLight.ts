@@ -424,34 +424,34 @@ function attachDeterministicChoiceTurns(cartridge: StoryCartridge): StoryCartrid
 [encounter: phase="confrontation" kind="the red lamps go dark one by one behind you" severity="2" outcome="active"]
 [choices: "Ask why the dying red lamps reached Room Seven"|"Say the darkening red lamps reached Room Seven"|"Use one red match on the dying red lamps"]`,
   }
-  const specs: Array<[string, DemoTurn]> = zh ? [
-    ['追问第二次邀请', cartridge.demoTurns[0]],
-    ['查看黄铜目录', cartridge.demoTurns[1]],
-    ['请玛拉拿出今晚的房间登记', cartridge.demoTurns[1]],
-    ['前往二层确认八号房门的位置', cartridge.demoTurns[2]],
-    ['带着她的警告前往二层八号房', cartridge.demoTurns[2]],
-    ['带着两张楼层图前往二层走廊', cartridge.demoTurns[2]],
-    ['走向仍亮着红灯的七号房', cartridge.demoTurns[3]],
-    ['说明红灯熄灭的房号顺序', orderConfrontation],
-    ['说明熄灭的红灯已经逼近七号房', cartridge.demoTurns[4]],
-    ['检查发出收缩声的空墙', cartridge.demoTurns[5]],
-    ['拒绝暗红房门的邀请', cartridge.demoTurns[6]],
+  const specs: Array<[string, DemoTurn, string[]]> = zh ? [
+    ['追问第二次邀请', cartridge.demoTurns[0], ['无名旅馆 · 大厅']],
+    ['查看黄铜目录', cartridge.demoTurns[1], ['无名旅馆 · 大厅']],
+    ['请玛拉拿出今晚的房间登记', cartridge.demoTurns[1], ['无名旅馆 · 大厅']],
+    ['前往二层确认八号房门的位置', cartridge.demoTurns[2], ['无名旅馆 · 大厅']],
+    ['带着她的警告前往二层八号房', cartridge.demoTurns[2], ['无名旅馆 · 大厅']],
+    ['带着两张楼层图前往二层走廊', cartridge.demoTurns[2], ['无名旅馆 · 大厅']],
+    ['走向仍亮着红灯的七号房', cartridge.demoTurns[3], ['无名旅馆 · 二层走廊']],
+    ['说明红灯熄灭的房号顺序', orderConfrontation, ['无名旅馆 · 二层走廊']],
+    ['说明熄灭的红灯已经逼近七号房', cartridge.demoTurns[4], ['无名旅馆 · 二层走廊']],
+    ['检查发出收缩声的空墙', cartridge.demoTurns[5], ['无名旅馆 · 二层走廊']],
+    ['拒绝暗红房门的邀请', cartridge.demoTurns[6], ['无名旅馆 · 九号房门外']],
   ] : [
-    ['Ask about the second invitation', cartridge.demoTurns[0]],
-    ['Inspect the brass directory', cartridge.demoTurns[1]],
-    ["Ask Mara to show tonight’s room register", cartridge.demoTurns[1]],
-    ['Go upstairs and verify the position of Room Eight', cartridge.demoTurns[2]],
-    ['Take her warning upstairs to Room Eight', cartridge.demoTurns[2]],
-    ['Take both floor plans to the second-floor corridor', cartridge.demoTurns[2]],
-    ['Go to lit Room Seven', cartridge.demoTurns[3]],
-    ['Check the red lamps in room order', orderConfrontation],
-    ['Say the darkening red lamps reached Room Seven', cartridge.demoTurns[4]],
-    ['Inspect the blank wall that contracted', cartridge.demoTurns[5]],
-    ['Decline the oxblood door invitation', cartridge.demoTurns[6]],
+    ['Ask about the second invitation', cartridge.demoTurns[0], ['Unnamed Hotel · Lobby']],
+    ['Inspect the brass directory', cartridge.demoTurns[1], ['Unnamed Hotel · Lobby']],
+    ["Ask Mara to show tonight’s room register", cartridge.demoTurns[1], ['Unnamed Hotel · Lobby']],
+    ['Go upstairs and verify the position of Room Eight', cartridge.demoTurns[2], ['Unnamed Hotel · Lobby']],
+    ['Take her warning upstairs to Room Eight', cartridge.demoTurns[2], ['Unnamed Hotel · Lobby']],
+    ['Take both floor plans to the second-floor corridor', cartridge.demoTurns[2], ['Unnamed Hotel · Lobby']],
+    ['Go to lit Room Seven', cartridge.demoTurns[3], ['Unnamed Hotel · Second-Floor Corridor']],
+    ['Check the red lamps in room order', orderConfrontation, ['Unnamed Hotel · Second-Floor Corridor']],
+    ['Say the darkening red lamps reached Room Seven', cartridge.demoTurns[4], ['Unnamed Hotel · Second-Floor Corridor']],
+    ['Inspect the blank wall that contracted', cartridge.demoTurns[5], ['Unnamed Hotel · Second-Floor Corridor']],
+    ['Decline the oxblood door invitation', cartridge.demoTurns[6], ['Unnamed Hotel · Outside Room Nine']],
   ]
   return {
     ...cartridge,
-    deterministicChoiceTurns: specs.map(([action, turn]) => ({ action, turn })),
+    deterministicChoiceTurns: specs.map(([action, turn, locations]) => ({ action, when: { locations }, turn })),
   }
 }
 

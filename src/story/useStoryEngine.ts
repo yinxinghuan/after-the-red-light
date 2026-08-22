@@ -142,7 +142,9 @@ export function normalizeSave(candidate: LegacyStorySave | null | undefined, car
   normalized = repairLegacyDangerMethodChoices(normalized, cartridge)
   normalized = restoreDeterministicRecoveryChoice(normalized, cartridge)
   normalized = repairLegacyObjectiveRecoveryChoices(normalized, cartridge)
-  if (!normalized.sessionEnded && normalized.choices.length === 0) normalized.choices = createRecoveryChoices(normalized, cartridge)
+  if (!normalized.sessionEnded && normalized.choices.length === 0 && !normalized.facts.consistency_quarantined_action) {
+    normalized.choices = createRecoveryChoices(normalized, cartridge)
+  }
   const floor = activeStatFloorRule(normalized, cartridge)
   if (!normalized.sessionEnded && floor) {
     normalized.choices = statFloorChoices(normalized, cartridge) ?? normalized.choices
