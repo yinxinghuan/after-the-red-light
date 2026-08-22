@@ -379,9 +379,9 @@ export function canonicalizeTurnMetadata(
         || entry.type === 'encounter' || entry.type === 'session_end'
       ))
       let grounded = candidates.filter((choice) => {
-        if (hasDeterministicChoiceAction(cartridge, choice.label)
+        if (!trustedAuthored && hasDeterministicChoiceAction(cartridge, choice.label)
           && !deterministicChoiceActionAvailable(candidateSave, cartridge, choice.label)) return false
-        if (!trackableProgress && semanticallyRepeatsCurrentAction(choice.label, action, cartridge.locale)) return false
+        if (!trustedAuthored && !trackableProgress && semanticallyRepeatsCurrentAction(choice.label, action, cartridge.locale)) return false
         const domain = resolveDomainAction(candidateSave, cartridge, choice.label)
         return domain ? domain.status === 'accepted' : Boolean(inferActionDestination(candidateSave, cartridge, choice.label)) || textGrounded.has(choice.label)
       })
